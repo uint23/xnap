@@ -34,6 +34,8 @@ struct pointer_t {
 	int    y0;
 	int    x1;
 	int    y1;
+	int    lx;
+	int    ly;
 };
 
 void capfull(void);
@@ -42,6 +44,7 @@ void capsel(void);
 void capwin(void);
 unsigned char channel(unsigned long px, Mask m);
 void die(const char* s);
+void drawrect(void);
 void mkppm(XImage* img);
 void parseargs(int argc, char** argv);
 void quit(Bool ex);
@@ -50,6 +53,7 @@ void setup(void);
 
 Display* dpy = NULL;
 Window root = None;
+GC selgc = 0;
 int scr = -1;
 
 enum mode mode = MODE_SEL;
@@ -174,6 +178,17 @@ void die(const char* s)
 	exit(EXIT_FAILURE);
 }
 
+void drawrect(void)
+{
+	int rx = MIN(p.x0, p.x1);
+	int ry = MIN(p.y0, p.y1);
+	int rw = MAX(p.x0, p.x1) - rx;
+	int rh = MAX(p.y0, p.y1) - ry;
+
+	if (rw > 0 && rh > 0)
+		XDrawRectangle(dpy, root, selgc, rx, ry, rw, rh);
+}
+
 void mkppm(XImage* img)
 {
 	FILE* out = stdout;
@@ -215,6 +230,7 @@ void quit(Bool ex)
 {
 	XUngrabPointer(dpy, CurrentTime);
 	XFreeCursor(dpy, p.cur);
+	XFreeGC(dpy, selgc);
 	XCloseDisplay(dpy);
 	if (ex)
 		exit(EXIT_SUCCESS);
@@ -234,14 +250,26 @@ void run(void)
 			}
 			/* start selecting for selection mode */
 			p.sel = True;
-			p.x0 = p.x1 = ev.xbutton.x_root;
-			p.y0 = p.y1 = ev.xbutton.y_root;
+			p.x0 = p.x1 = p.lx = ev.xbutton.x_root;
+			p.y0 = p.y1 = p.lx = ev.xbutton.y_root;
 		}
 		else if (ev.type == MotionNotify && p.sel) { /* dragging selection */
+			/* remove old rectangle */
+			drawrect();
+
 			p.x1 = ev.xmotion.x_root;
 			p.y1 = ev.xmotion.y_root;
+
+			/* make new rect */
+			drawrect();
+
+			p.lx = p.x1;
+			p.ly = p.y1;
 		}
 		else if (ev.type == ButtonRelease && p.sel && b == Button1) { /* release selection */
+			/* remove final rectangle */
+			drawrect();
+
 			p.sel = False;
 			capsel();
 			quit(True);
@@ -272,6 +300,16 @@ void setup(void)
 	);
 	if (p.ret != GrabSuccess)
 		die("XGrabPointer failed");
+
+	/* selection rectangle */
+	XGCValues gcv;
+	gcv.function = GXxor;
+	gcv.foreground = WhitePixel(dpy, scr) ^ BlackPixel(dpy, scr);
+	gcv.line_style = LineSolid;
+	gcv.line_width = sel_line_width;
+	gcv.subwindow_mode = IncludeInferiors;
+
+	selgc = XCreateGC(dpy, root, GCFunction | GCForeground | GCLineWidth | GCLineStyle | GCSubwindowMode, &gcv);
 }
 
 int main(int argc, char** argv)
