@@ -28,7 +28,7 @@ struct pointer_t {
 	int    ret;
 
 	Bool   sel;
-	Cursor selcur;
+	Cursor cur;
 
 	int    x0;
 	int    y0;
@@ -36,12 +36,11 @@ struct pointer_t {
 	int    y1;
 };
 
-void capfull(void);
-void capscr(void);
-void capsel(void);
-void capwin(void);
+void capfull(XImage* img);
+void capscr(XImage* img);
+void capsel(XImage* img);
+void capwin(XImage* img);
 unsigned char channel(unsigned long px, Mask m);
-void compimg(void);
 void die(const char* s);
 void mkppm(XImage* img);
 void parseargs(int argc, char** argv);
@@ -51,31 +50,94 @@ void setup(void);
 
 Display* dpy = NULL;
 Window root = None;
-XImage* img = NULL;
 int scr = -1;
 
 enum mode mode = MODE_SEL;
 int selscr = -1;
 struct pointer_t p = {0};
 
-void capfull(void)
+void capfull(XImage* img)
 {
+	int w = DisplayWidth(dpy, scr);
+	int h = DisplayHeight(dpy, scr);
 
+	img = XGetImage(dpy, root, 0, 0, w, h, AllPlanes, ZPixmap);
+	if (!img)
+		die("XGetImage failed");
+
+	mkppm(img);
 }
 
-void capscr(void)
+void capscr(XImage* img)
 {
+#ifdef XINERAMA
+	int n;
+	XineramaScreenInfo* si = XineramaQueryScreens(dpy, &n);
+	if (!si || selscr < 0 || selscr >= n) {
+		if (si)
+			XFree(si);
+		die("invalid screen");
+	}
 
+	int x = si[selscr].x_org;
+	int y = si[selscr].y_org;
+	int w = si[selscr].width;
+	int h = si[selscr].height;
+	XFree(si);
+
+	img = XGetImage(dpy, root, x, y, w, h, AllPlanes, ZPixmap);
+	if (!img)
+		die("XGetImage failed");
+
+	mkppm(img);
+#else
+	die("xinerama support not compiled");
+#endif
 }
 
-void capsel(void)
+void capsel(XImage* img)
 {
+	int rx = MIN(p.x0, p.x1);
+	int ry = MIN(p.y0, p.y1);
+	int rw = MAX(p.x0, p.x1) - rx;
+	int rh = MAX(p.y0, p.y1) - ry;
 
+	if (rw <= 0 || rh <= 0)
+		die("empty selection");
+
+	img = XGetImage(dpy, root, rx, ry, rw, rh, AllPlanes, ZPixmap);
+	if (!img)
+		die("XGetImage failed");
+
+	mkppm(img);
 }
 
-void capwin(void)
+void capwin(XImage* img)
 {
+	Window child;
+	Window rroot;
+	int rx;
+	int ry;
+	int wx;
+	int wy;
+	unsigned int rw;
+	unsigned int rh;
+	unsigned int rb;
+	unsigned int rd;
 
+	/* find window under pointer */
+	XQueryPointer(dpy, root, &rroot, &child, &rx, &ry, &wx, &wy, &rb);
+	if (child == None)
+		child = root;
+
+	XGetGeometry(dpy, child, &rroot, &rx, &ry, &rw, &rh, &rb, &rd);
+	XTranslateCoordinates(dpy, child, root, 0, 0, &rx, &ry, &rroot);
+
+	img = XGetImage(dpy, root, rx, ry, rw, rh, AllPlanes, ZPixmap);
+	if (!img)
+		die("XGetImage failed");
+
+	mkppm(img);
 }
 
 unsigned char channel(unsigned long px, Mask m)
@@ -104,26 +166,6 @@ unsigned char channel(unsigned long px, Mask m)
 	if (bits == 8)
 		return rv;
 	return ((rv * 255UL) / ((1UL << bits) - 1UL));
-}
-
-void compimg(void)
-{
-	/* create selection rectangle */
-	int rx = MIN(p.x0, p.x1);
-	int ry = MIN(p.y0, p.y1);
-	int rw = MAX(p.x0, p.x1) - rx;
-	int rh = MAX(p.y0, p.y1) - ry;
-
-	if (rw <= 0 || rh <= 0)
-		die("empty selection");
-
-	img = XGetImage(dpy, root, rx, ry, rw, rh, AllPlanes, ZPixmap);
-	if (!img)
-		die("XGetImage failed");
-
-	mkppm(img);
-	XDestroyImage(img);
-	quit(True);
 }
 
 void die(const char* s)
@@ -172,7 +214,7 @@ void parseargs(int argc, char** argv)
 void quit(Bool ex)
 {
 	XUngrabPointer(dpy, CurrentTime);
-	XFreeCursor(dpy, p.selcur);
+	XFreeCursor(dpy, p.cur);
 	XCloseDisplay(dpy);
 	if (ex)
 		exit(EXIT_SUCCESS);
@@ -184,9 +226,13 @@ void run(void)
 	for (;;) {
 		XNextEvent(dpy, &ev);
 
-
 		unsigned int b = ev.xbutton.button;
-		if (ev.type == ButtonPress && b == Button1) { /* start selecting */
+		if (ev.type == ButtonPress && b == Button1) {
+			if (mode == MODE_WIN) {
+				capwin(NULL);
+				quit(True);
+			}
+			/* start selecting for selection mode */
 			p.sel = True;
 			p.x0 = p.x1 = ev.xbutton.x_root;
 			p.y0 = p.y1 = ev.xbutton.y_root;
@@ -197,7 +243,8 @@ void run(void)
 		}
 		else if (ev.type == ButtonRelease && p.sel && b == Button1) { /* release selection */
 			p.sel = False;
-			compimg();
+			capsel(NULL);
+			quit(True);
 		}
 		else if (ev.type == ButtonPress && (b == Button2 || b == Button3)) { /* quit */
 			quit(True);
@@ -216,11 +263,12 @@ void setup(void)
 	root = RootWindow(dpy, scr);
 
 	/* pointer */
-	p.selcur = XCreateFontCursor(dpy, cursor_font);
+	const unsigned int cur = (mode == MODE_WIN ? win_cursor : sel_cursor);
+	p.cur = XCreateFontCursor(dpy, cur);
 	p.ret = XGrabPointer(
 		dpy, root, False,
 		ButtonPressMask | ButtonReleaseMask | PointerMotionMask,
-		GrabModeAsync, GrabModeAsync, None, p.selcur, CurrentTime
+		GrabModeAsync, GrabModeAsync, None, p.cur, CurrentTime
 	);
 	if (p.ret != GrabSuccess)
 		die("XGrabPointer failed");
@@ -229,6 +277,24 @@ void setup(void)
 int main(int argc, char** argv)
 {
 	parseargs(argc, argv);
+
+	/* immediate capture modes */
+	if (mode == MODE_FLL || mode == MODE_SCR) {
+		dpy = XOpenDisplay(NULL);
+		if (dpy == NULL)
+			die("failed to open display");
+		scr = DefaultScreen(dpy);
+		root = RootWindow(dpy, scr);
+
+		if (mode == MODE_FLL)
+			capfull(NULL);
+		else
+			capscr(NULL);
+
+		XCloseDisplay(dpy);
+		return EXIT_SUCCESS;
+	}
+
 	setup();
 	run();
 	quit(True); /* unreachable */

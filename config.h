@@ -1,3 +1,4 @@
 #include <X11/cursorfont.h>
 
-static const unsigned int cursor_font = XC_heart;
+static const unsigned int sel_cursor = XC_dot;
+static const unsigned int win_cursor = XC_right_ptr;

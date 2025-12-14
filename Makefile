@@ -7,7 +7,7 @@ MANPREFIX = ${PREFIX}/share/man
 
 # libs
 # remove the Xinerama parts if you don't want Xinerama support
-LIBS = -lX11 -lXINERAMA
+LIBS = -lX11 -lXinerama
 CPPFLAGS = -DXINERAMA
 
 # flags
