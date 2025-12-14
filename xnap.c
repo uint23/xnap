@@ -30,6 +30,25 @@ int scr = -1;
 struct pointer_t p = {0};
 XImage* img = NULL;
 
+void compimg(void)
+{
+	/* create selection rectangle */
+	int rx = MIN(p.x0, p.x1);
+	int ry = MIN(p.y0, p.y1);
+	int rw = MAX(p.x0, p.x1) - rx;
+	int rh = MAX(p.y0, p.y1) - ry;
+
+	img = XGetImage(dpy, root, rx, ry, rw, rh, AllPlanes, ZPixmap);
+	if (!img)
+		die("XGetImage failed");
+
+	unsigned long p0 = XGetPixel(img, 0, 0);
+	fprintf(stderr, "first pixe =#%lx depth=%d bpp=%d\n", p0, img->depth, img->bits_per_pixel);
+
+	XDestroyImage(img);
+	quit(True);
+}
+
 void die(const char* s)
 {
 	fprintf(stderr, "xnap: %s", s);
@@ -68,15 +87,7 @@ void run(void)
 		}
 		else if (ev.type == ButtonRelease && p.sel && b == Button1) { /* release selection */
 			p.sel = False;
-
-			/* creating selection rectangle */
-			int recx = MIN(p.x0, p.x1);
-			int recy = MIN(p.y0, p.y1);
-			int recw = MAX(p.x0, p.x1) - recx;
-			int rech = MAX(p.y0, p.y1) - recy;
-
-			quit(False);
-			compimg()
+			compimg();
 		}
 	}
 }
@@ -84,7 +95,8 @@ void run(void)
 void setup(void)
 {
 	/* X surface */
-	if (!(dpy = XOpenDisplay(NULL)))
+	dpy = XOpenDisplay(NULL);
+	if (dpy == NULL)
 		die ("failed to open display");
 
 	int scr = DefaultScreen(dpy);
@@ -93,7 +105,7 @@ void setup(void)
 	/* pointer */
 	p.ret = XGrabPointer(
 		dpy, root, False,
-		ButtonPressMask | ButtonReleaseMask | PointerMotionMask | KeyPressMask,
+		ButtonPressMask | ButtonReleaseMask | PointerMotionMask,
 		GrabModeAsync, GrabModeAsync, None, None, CurrentTime
 	);
 	if (p.ret != GrabSuccess)
@@ -106,6 +118,7 @@ int main(int argc, char** argv)
 	(void) argv;
 
 	setup();
+	run();
 	quit(True); /* unreachable */
 
 	return EXIT_SUCCESS;
