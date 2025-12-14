@@ -1,16 +1,28 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
-#include <X11/X.h>
 #include <X11/cursorfont.h>
-#include <X11/Xlib.h>
 #include <X11/keysym.h>
+#include <X11/X.h>
+#include <X11/Xlib.h>
 #include <X11/Xutil.h>
+
+#ifdef XINERAMA
+#include <X11/extensions/Xinerama.h>
+#endif
 
 #include "config.h"
 
 #define MIN(x, y) (x < y ? x : y)
 #define MAX(x, y) (x > y ? x : y)
+
+enum mode {
+	MODE_SEL,
+	MODE_FLL,
+	MODE_SCR,
+	MODE_WIN
+};
 
 struct pointer_t {
 	int    ret;
@@ -24,19 +36,47 @@ struct pointer_t {
 	int    y1;
 };
 
+void capfull(void);
+void capscr(void);
+void capsel(void);
+void capwin(void);
 unsigned char channel(unsigned long px, Mask m);
 void compimg(void);
 void die(const char* s);
 void mkppm(XImage* img);
+void parseargs(int argc, char** argv);
 void quit(Bool ex);
 void run(void);
 void setup(void);
 
 Display* dpy = NULL;
 Window root = None;
-int scr = -1;
-struct pointer_t p = {0};
 XImage* img = NULL;
+int scr = -1;
+
+enum mode mode = MODE_SEL;
+int selscr = -1;
+struct pointer_t p = {0};
+
+void capfull(void)
+{
+
+}
+
+void capscr(void)
+{
+
+}
+
+void capsel(void)
+{
+
+}
+
+void capwin(void)
+{
+
+}
 
 unsigned char channel(unsigned long px, Mask m)
 {
@@ -107,6 +147,26 @@ void mkppm(XImage* img)
 			fputc(channel(px, img->blue_mask), out);
 		}
 	}
+
+	fflush(stdout);
+}
+
+void parseargs(int argc, char** argv)
+{
+	for (int i = 1; i < argc; i++) {
+		if (!strcmp(argv[i], "-f"))
+			mode = MODE_FLL;
+
+		else if (!strcmp(argv[i], "-w"))
+			mode = MODE_WIN;
+
+		else if (!strcmp(argv[i], "-s") && i+1 < argc) {
+			mode = MODE_SCR;
+			selscr = atoi(argv[++i]);
+		}
+		else
+			die("usage: xnap [-f | -w | -s N]");
+	}
 }
 
 void quit(Bool ex)
@@ -168,9 +228,7 @@ void setup(void)
 
 int main(int argc, char** argv)
 {
-	(void) argc;
-	(void) argv;
-
+	parseargs(argc, argv);
 	setup();
 	run();
 	quit(True); /* unreachable */
