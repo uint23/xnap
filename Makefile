@@ -6,17 +6,14 @@ PREFIX = /usr/local
 MANPREFIX = ${PREFIX}/share/man
 
 # libs
-LIBS = -lX11
+# remove the Xinerama parts if you don't want Xinerama support
+LIBS = -lX11 -lXINERAMA
+CPPFLAGS = -DXINERAMA
 
 # flags
-# CPPFLAGS =
 # CFLAGS = -std=c99 -Wall -Wextra -O0 -g ${CPPFLAGS} -fdiagnostics-color=always # debug
-CFLAGS = -std=c99 -Wall -Wextra -Os ${CPPFLAGS} -fdiagnostics-color=always
-LDFLAGS = ${LIBS}
-
-# uncomment this block for OpenBSD
-# CFLAGS += -I/usr/X11R6/include
-# LDFLAGS += -L/usr/X11R6/lib
+CFLAGS = -std=c99 -Wall -Wextra -Os ${CPPFLAGS} -fdiagnostics-color=always -I/usr/X11R6/include
+LDFLAGS = ${LIBS} -L/usr/X11R6/lib
 
 # files
 SRC = xnap.c
