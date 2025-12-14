@@ -27,7 +27,7 @@ struct pointer_t {
 unsigned char channel(unsigned long px, Mask m);
 void compimg(void);
 void die(const char* s);
-void mkppm(const char* path, XImage* img);
+void mkppm(XImage* img);
 void quit(Bool ex);
 void run(void);
 void setup(void);
@@ -74,11 +74,14 @@ void compimg(void)
 	int rw = MAX(p.x0, p.x1) - rx;
 	int rh = MAX(p.y0, p.y1) - ry;
 
+	if (rw <= 0 || rh <= 0)
+		die("empty selection");
+
 	img = XGetImage(dpy, root, rx, ry, rw, rh, AllPlanes, ZPixmap);
 	if (!img)
 		die("XGetImage failed");
 
-	mkppm("img.ppm", img);
+	mkppm(img);
 	XDestroyImage(img);
 	quit(True);
 }
@@ -89,29 +92,21 @@ void die(const char* s)
 	exit(EXIT_FAILURE);
 }
 
-void mkppm(const char* path, XImage* img)
+void mkppm(XImage* img)
 {
-	FILE* f = fopen(path, "w");
-	if (!f)
-		die("fopen failed");
+	FILE* out = stdout;
 
 	/* write ppm metadata header */
-	fprintf(f, "P6\n%d %d\n255\n", img->width, img->height);
+	fprintf(out, "P6\n%d %d\n255\n", img->width, img->height);
 
 	for (int y = 0; y < img->height; y++) {
 		for (int x = 0; x < img->width; x++) {
 			unsigned long px = XGetPixel(img, x, y);
-			unsigned char r = channel(px, img->red_mask);
-			unsigned char g = channel(px, img->green_mask);
-			unsigned char b = channel(px, img->blue_mask);
-
-			fputc(r, f);
-			fputc(g, f);
-			fputc(b, f);
+			fputc(channel(px, img->red_mask), out);
+			fputc(channel(px, img->green_mask), out);
+			fputc(channel(px, img->blue_mask), out);
 		}
 	}
-
-	fclose(f);
 }
 
 void quit(Bool ex)
