@@ -1,0 +1,56 @@
+.TH XNAP 1 xnap\-1.0
+.SH NAME
+xnap \- minimal X11 screenshot utility
+.SH SYNOPSIS
+.B xnap
+.RB [ \-f ]
+.RB [ \-w ]
+.RB [ \-s
+.IR n ]
+.SH DESCRIPTION
+.B xnap
+captures screen contents from an X11 display and writes to a PPM6 image
+to standard output.
+.PP
+By default,
+.B xnap
+allows the user to select a rectangular region using the mouse.
+The selection rectangle is drawn, inverted then removed after the selection
+is complete.
+.SH OPTIONS
+.TP
+.B \-f
+Capture the full root window; the whole screen.
+.TP
+.B \-w
+Capture the window currently under the pointer.
+.TP
+.BI \-s " N"
+Capture screen N
+.I n
+as reported by the Xinerama extension.
+.SH OUTPUT
+.B xnap
+writes a PPM (P6) image to stdout.
+.SH USAGE
+Redirect output to a file or pipe it to another program:
+.PP
+.nf
+xnap > image.ppm
+xnap \-f | converto... whatever.png
+.fi
+.SH ENVIRONMENT
+.TP
+.B DISPLAY
+Specifies the X11 display to connect to.
+.SH DEPENDENCIES
+.B xnap
+requires Xlib.
+Optional Xinerama support may be enabled at compile time.
+.SH AUTHORS
+Written by uint.
+.SH LICENSE
+See the LICENSE file for the terms of redistribution.
+.SH SEE ALSO
+.BR X (7),
+.BR ppm (5)
