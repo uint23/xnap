@@ -6,6 +6,8 @@
 #include <X11/keysym.h>
 #include <X11/Xutil.h>
 
+#include "config.h"
+
 #define MIN(x, y) (x < y ? x : y)
 #define MAX(x, y) (x > y ? x : y)
 
@@ -72,9 +74,6 @@ void compimg(void)
 	if (!img)
 		die("XGetImage failed");
 
-	unsigned long p0 = XGetPixel(img, 0, 0);
-	fprintf(stderr, "first pixe =#%lx depth=%d bpp=%d\n", p0, img->depth, img->bits_per_pixel);
-
 	mkppm("img.ppm", img);
 	XDestroyImage(img);
 	quit(True);
@@ -82,7 +81,7 @@ void compimg(void)
 
 void die(const char* s)
 {
-	fprintf(stderr, "xnap: %s", s);
+	fprintf(stderr, "xnap: %s\n", s);
 	exit(EXIT_FAILURE);
 }
 
@@ -125,11 +124,6 @@ void run(void)
 	for (;;) {
 		XNextEvent(dpy, &ev);
 
-		if (ev.type == KeyPress) {
-			KeySym ks = XLookupKeysym(&ev.xkey, 0);
-			if (ks == XK_Escape || ks == XK_q)
-				quit(True);
-		}
 
 		unsigned int b = ev.xbutton.button;
 		if (ev.type == ButtonPress && b == Button1) { /* start selecting */
@@ -144,6 +138,9 @@ void run(void)
 		else if (ev.type == ButtonRelease && p.sel && b == Button1) { /* release selection */
 			p.sel = False;
 			compimg();
+		}
+		else if (ev.type == ButtonPress && (b == Button2 || b == Button3)) { /* quit */
+			quit(True);
 		}
 	}
 }
