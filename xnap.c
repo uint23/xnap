@@ -2,6 +2,7 @@
 #include <stdio.h>
 
 #include <X11/X.h>
+#include <X11/cursorfont.h>
 #include <X11/Xlib.h>
 #include <X11/keysym.h>
 #include <X11/Xutil.h>
@@ -13,7 +14,10 @@
 
 struct pointer_t {
 	int    ret;
+
 	Bool   sel;
+	Cursor selcur;
+
 	int    x0;
 	int    y0;
 	int    x1;
@@ -113,6 +117,7 @@ void mkppm(const char* path, XImage* img)
 void quit(Bool ex)
 {
 	XUngrabPointer(dpy, CurrentTime);
+	XFreeCursor(dpy, p.selcur);
 	XCloseDisplay(dpy);
 	if (ex)
 		exit(EXIT_SUCCESS);
@@ -156,10 +161,11 @@ void setup(void)
 	root = RootWindow(dpy, scr);
 
 	/* pointer */
+	p.selcur = XCreateFontCursor(dpy, cursor_font);
 	p.ret = XGrabPointer(
 		dpy, root, False,
 		ButtonPressMask | ButtonReleaseMask | PointerMotionMask,
-		GrabModeAsync, GrabModeAsync, None, None, CurrentTime
+		GrabModeAsync, GrabModeAsync, None, p.selcur, CurrentTime
 	);
 	if (p.ret != GrabSuccess)
 		die("XGrabPointer failed");
