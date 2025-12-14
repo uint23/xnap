@@ -10,7 +10,7 @@ LIBS = -lX11
 
 # flags
 # CPPFLAGS =
-CFLAGS = -std=c99 -pedantic -Wall -Wextra -Os ${CPPFLAGS} -fdiagnostics-color=always
+CFLAGS = -std=c99 -Wall -Wextra -Os ${CPPFLAGS} -fdiagnostics-color=always
 LDFLAGS = ${LIBS}
 
 # uncomment this block for OpenBSD
