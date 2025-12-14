@@ -21,17 +21,23 @@ SRC = xnap.c
 all: xnap
 
 # rules
-sxwm: ${OBJ}
-	${CC} -o xnap ${LDFLAGS}
+xnap:
+	${CC} ${SRC} -o xnap ${LDFLAGS}
 
 clean:
 	rm -rf xnap
 
 install: all
-	# TODO
+	mkdir -p ${DESTDIR}${PREFIX}/bin
+	mkdir -p ${DESTDIR}${MANPREFIX}/man1
+	cp -f xnap ${DESTDIR}${PREFIX}/bin
+	chmod 755 ${DESTDIR}${PREFIX}/bin/xnap
+	cp -f xnap.1 ${DESTDIR}${MANPREFIX}/man1
+	chmod 644 ${DESTDIR}${MANPREFIX}/man1/xnap.1
 
 uninstall:
-	# TODO
+	rm -f ${DESTDIR}${PREFIX}/bin/xnap
+	rm -f ${DESTDIR}${MANPREFIX}/man1/xnap.1
 
 clangd:
 	rm -f compile_flags.txt
