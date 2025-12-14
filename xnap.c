@@ -99,7 +99,7 @@ void setup(void)
 	if (dpy == NULL)
 		die ("failed to open display");
 
-	int scr = DefaultScreen(dpy);
+	scr = DefaultScreen(dpy);
 	root = RootWindow(dpy, scr);
 
 	/* pointer */
