@@ -36,10 +36,10 @@ struct pointer_t {
 	int    y1;
 };
 
-void capfull(XImage* img);
-void capscr(XImage* img);
-void capsel(XImage* img);
-void capwin(XImage* img);
+void capfull(void);
+void capscr(void);
+void capsel(void);
+void capwin(void);
 unsigned char channel(unsigned long px, Mask m);
 void die(const char* s);
 void mkppm(XImage* img);
@@ -56,19 +56,19 @@ enum mode mode = MODE_SEL;
 int selscr = -1;
 struct pointer_t p = {0};
 
-void capfull(XImage* img)
+void capfull(void)
 {
 	int w = DisplayWidth(dpy, scr);
 	int h = DisplayHeight(dpy, scr);
 
-	img = XGetImage(dpy, root, 0, 0, w, h, AllPlanes, ZPixmap);
+	XImage* img = XGetImage(dpy, root, 0, 0, w, h, AllPlanes, ZPixmap);
 	if (!img)
 		die("XGetImage failed");
 
 	mkppm(img);
 }
 
-void capscr(XImage* img)
+void capscr(void)
 {
 #ifdef XINERAMA
 	int n;
@@ -85,7 +85,7 @@ void capscr(XImage* img)
 	int h = si[selscr].height;
 	XFree(si);
 
-	img = XGetImage(dpy, root, x, y, w, h, AllPlanes, ZPixmap);
+	XImage* img = XGetImage(dpy, root, x, y, w, h, AllPlanes, ZPixmap);
 	if (!img)
 		die("XGetImage failed");
 
@@ -95,7 +95,7 @@ void capscr(XImage* img)
 #endif
 }
 
-void capsel(XImage* img)
+void capsel(void)
 {
 	int rx = MIN(p.x0, p.x1);
 	int ry = MIN(p.y0, p.y1);
@@ -105,14 +105,14 @@ void capsel(XImage* img)
 	if (rw <= 0 || rh <= 0)
 		die("empty selection");
 
-	img = XGetImage(dpy, root, rx, ry, rw, rh, AllPlanes, ZPixmap);
+	XImage* img = XGetImage(dpy, root, rx, ry, rw, rh, AllPlanes, ZPixmap);
 	if (!img)
 		die("XGetImage failed");
 
 	mkppm(img);
 }
 
-void capwin(XImage* img)
+void capwin(void)
 {
 	Window child;
 	Window rroot;
@@ -133,7 +133,7 @@ void capwin(XImage* img)
 	XGetGeometry(dpy, child, &rroot, &rx, &ry, &rw, &rh, &rb, &rd);
 	XTranslateCoordinates(dpy, child, root, 0, 0, &rx, &ry, &rroot);
 
-	img = XGetImage(dpy, root, rx, ry, rw, rh, AllPlanes, ZPixmap);
+	XImage* img = XGetImage(dpy, root, rx, ry, rw, rh, AllPlanes, ZPixmap);
 	if (!img)
 		die("XGetImage failed");
 
@@ -229,7 +229,7 @@ void run(void)
 		unsigned int b = ev.xbutton.button;
 		if (ev.type == ButtonPress && b == Button1) {
 			if (mode == MODE_WIN) {
-				capwin(NULL);
+				capwin();
 				quit(True);
 			}
 			/* start selecting for selection mode */
@@ -243,7 +243,7 @@ void run(void)
 		}
 		else if (ev.type == ButtonRelease && p.sel && b == Button1) { /* release selection */
 			p.sel = False;
-			capsel(NULL);
+			capsel();
 			quit(True);
 		}
 		else if (ev.type == ButtonPress && (b == Button2 || b == Button3)) { /* quit */
@@ -287,9 +287,9 @@ int main(int argc, char** argv)
 		root = RootWindow(dpy, scr);
 
 		if (mode == MODE_FLL)
-			capfull(NULL);
+			capfull();
 		else
-			capscr(NULL);
+			capscr();
 
 		XCloseDisplay(dpy);
 		return EXIT_SUCCESS;
