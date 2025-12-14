@@ -10,6 +10,7 @@ LIBS = -lX11
 
 # flags
 # CPPFLAGS =
+# CFLAGS = -std=c99 -Wall -Wextra -O0 -g ${CPPFLAGS} -fdiagnostics-color=always # debug
 CFLAGS = -std=c99 -Wall -Wextra -Os ${CPPFLAGS} -fdiagnostics-color=always
 LDFLAGS = ${LIBS}
 

@@ -18,8 +18,10 @@ struct pointer_t {
 	int    y1;
 };
 
+unsigned char channel(unsigned long px, Mask m);
 void compimg(void);
 void die(const char* s);
+void mkppm(const char* path, XImage* img);
 void quit(Bool ex);
 void run(void);
 void setup(void);
@@ -29,6 +31,34 @@ Window root = None;
 int scr = -1;
 struct pointer_t p = {0};
 XImage* img = NULL;
+
+unsigned char channel(unsigned long px, Mask m)
+{
+	if (m == 0)
+		return 0;
+
+	int shift = 0;
+	/* shift down until we find channel */
+	while ((m & 1UL) == 0) {
+		m >>= 1UL;
+		shift++;
+	}
+
+	/* bits in channel */
+	int bits = 0;
+	while (m & 1UL) {
+		m >>= 1UL;
+		bits++;
+	}
+
+	/* raw channel value */
+	unsigned long rv = (px >> shift) & ((1UL << bits) - 1UL);
+
+	/* scale v from [0, 2^bits-1]->[0,255] to meet standard */
+	if (bits == 8)
+		return rv;
+	return ((rv * 255UL) / ((1UL << bits) - 1UL));
+}
 
 void compimg(void)
 {
@@ -45,6 +75,7 @@ void compimg(void)
 	unsigned long p0 = XGetPixel(img, 0, 0);
 	fprintf(stderr, "first pixe =#%lx depth=%d bpp=%d\n", p0, img->depth, img->bits_per_pixel);
 
+	mkppm("img.ppm", img);
 	XDestroyImage(img);
 	quit(True);
 }
@@ -53,6 +84,31 @@ void die(const char* s)
 {
 	fprintf(stderr, "xnap: %s", s);
 	exit(EXIT_FAILURE);
+}
+
+void mkppm(const char* path, XImage* img)
+{
+	FILE* f = fopen(path, "w");
+	if (!f)
+		die("fopen failed");
+
+	/* write ppm metadata header */
+	fprintf(f, "P6\n%d %d\n255\n", img->width, img->height);
+
+	for (int y = 0; y < img->height; y++) {
+		for (int x = 0; x < img->width; x++) {
+			unsigned long px = XGetPixel(img, x, y);
+			unsigned char r = channel(px, img->red_mask);
+			unsigned char g = channel(px, img->green_mask);
+			unsigned char b = channel(px, img->blue_mask);
+
+			fputc(r, f);
+			fputc(g, f);
+			fputc(b, f);
+		}
+	}
+
+	fclose(f);
 }
 
 void quit(Bool ex)
