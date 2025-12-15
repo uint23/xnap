@@ -251,7 +251,7 @@ void run(void)
 			/* start selecting for selection mode */
 			p.sel = True;
 			p.x0 = p.x1 = p.lx = ev.xbutton.x_root;
-			p.y0 = p.y1 = p.lx = ev.xbutton.y_root;
+			p.y0 = p.y1 = p.ly = ev.xbutton.y_root;
 		}
 		else if (ev.type == MotionNotify && p.sel) { /* dragging selection */
 			/* remove old rectangle */
