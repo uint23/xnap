@@ -254,6 +254,9 @@ void run(void)
 			p.y0 = p.y1 = p.ly = ev.xbutton.y_root;
 		}
 		else if (ev.type == MotionNotify && p.sel) { /* dragging selection */
+			/* keep only latest motion ev */
+			while (XCheckTypedEvent(dpy, MotionNotify, &ev));
+
 			/* remove old rectangle */
 			drawrect();
 
@@ -269,6 +272,7 @@ void run(void)
 		else if (ev.type == ButtonRelease && p.sel && b == Button1) { /* release selection */
 			/* remove final rectangle */
 			drawrect();
+			XSync(dpy, False);
 
 			p.sel = False;
 			capsel();
