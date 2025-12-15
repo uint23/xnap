@@ -9,7 +9,7 @@ xnap \- minimal X11 screenshot utility
 .IR n ]
 .SH DESCRIPTION
 .B xnap
-captures screen contents from an X11 display and writes to a PPM6 image
+captures screen contents from an X11 display and writes a PPM6 image
 to standard output.
 .PP
 By default,
@@ -26,18 +26,18 @@ Capture the full root window; the whole screen.
 Capture the window currently under the pointer.
 .TP
 .BI \-s " N"
-Capture screen N
-.I n
-as reported by the Xinerama extension.
+Capture screen N as reported by the Xinerama extension.
 .SH OUTPUT
 .B xnap
-writes a PPM (P6) image to stdout.
+writes a binary PPM (P6) image to standard output (stdout).
 .SH USAGE
 Redirect output to a file or pipe it to another program:
 .PP
 .nf
 xnap > image.ppm
-xnap \-f | converto... whatever.png
+xnap -f > fullscreen.ppm
+xnap -s 0 > screen0.ppm
+xnap | convert ppm:- image.png
 .fi
 .SH ENVIRONMENT
 .TP
