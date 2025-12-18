@@ -8,8 +8,10 @@ conversion.
 
 ## Building and installing
 
+```
 make
 sudo make install
+```
 
 ## Dependencies
 

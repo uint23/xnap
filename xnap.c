@@ -36,6 +36,8 @@ struct pointer_t {
 	int    y1;
 	int    lx;
 	int    ly;
+	/* whether we've grabbed the X server during a selection */
+	Bool   srv;
 };
 
 void capfull(void);
@@ -178,15 +180,25 @@ void die(const char* s)
 	exit(EXIT_FAILURE);
 }
 
-void drawrect(void)
+/*
+ * Use this when you need to draw/erase a previously drawn 
+ * rectangle with explicit coordinates instead of relyinhg on
+ * the pointer state
+ */
+static void drawrectxy(int x0, int y0, int x1, int y1)
 {
-	int rx = MIN(p.x0, p.x1);
-	int ry = MIN(p.y0, p.y1);
-	int rw = MAX(p.x0, p.x1) - rx;
-	int rh = MAX(p.y0, p.y1) - ry;
+	int rx = MIN(x0, x1);
+	int ry = MIN(y0, y1);
+	int rw = MAX(x0, x1) - rx;
+	int rh = MAX(y0, y1) - ry;
 
 	if (rw > 0 && rh > 0)
 		XDrawRectangle(dpy, root, selgc, rx, ry, rw, rh);
+}
+
+void drawrect(void)
+{
+	drawrectxy(p.x0, p.y0, p.x1, p.y1);
 }
 
 void mkppm(XImage* img)
@@ -228,6 +240,10 @@ void parseargs(int argc, char** argv)
 
 void quit(Bool ex)
 {
+	if (p.srv) {
+		XUngrabServer(dpy);
+		p.srv = False;
+	}
 	XUngrabPointer(dpy, CurrentTime);
 	XFreeCursor(dpy, p.cur);
 	XFreeGC(dpy, selgc);
@@ -248,18 +264,25 @@ void run(void)
 				capwin();
 				quit(True);
 			}
-			/* start selecting for selection mode */
+			/*
+			 * grab, then release the server so other clients don't interfere - 
+			 * this way requests don't end up buffered
+			 */
+			XGrabServer(dpy);
+			p.srv = True;
 			p.sel = True;
 			p.x0 = p.x1 = p.lx = ev.xbutton.x_root;
 			p.y0 = p.y1 = p.ly = ev.xbutton.y_root;
+			XSync(dpy, False);
 		}
 		else if (ev.type == MotionNotify && p.sel) { /* dragging selection */
 			/* keep only latest motion ev */
 			while (XCheckTypedEvent(dpy, MotionNotify, &ev));
 
 			/* remove old rectangle */
-			drawrect();
+			drawrectxy(p.x0, p.y0, p.lx, p.ly);
 
+			/* update to new position */
 			p.x1 = ev.xmotion.x_root;
 			p.y1 = ev.xmotion.y_root;
 
@@ -268,11 +291,21 @@ void run(void)
 
 			p.lx = p.x1;
 			p.ly = p.y1;
+			/* push buffered drawing requests to the client */
+			XFlush(dpy);
 		}
 		else if (ev.type == ButtonRelease && p.sel && b == Button1) { /* release selection */
 			/* remove final rectangle */
 			drawrect();
 			XSync(dpy, False);
+
+			if (p.srv) {
+				/* let other clients resume requests */
+				XUngrabServer(dpy);
+				p.srv = False;
+				/* make sure ungrab is processed */
+				XSync(dpy, False);
+			}
 
 			p.sel = False;
 			capsel();
