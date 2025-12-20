@@ -259,8 +259,8 @@ void run(void)
 				capwin();
 				quit(True);
 			}
-			/* grab, then release the server so other clients don't interfere
-             * - this way requests don't end up buffered */
+			/* grab, then release the server so other clients don't interfere -
+               this way requests don't end up buffered */
 			XGrabServer(dpy);
 			p.srv = True;
 			p.sel = True;
