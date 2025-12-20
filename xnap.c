@@ -180,12 +180,7 @@ void die(const char* s)
 	exit(EXIT_FAILURE);
 }
 
-/*
- * Use this when you need to draw/erase a previously drawn 
- * rectangle with explicit coordinates instead of relyinhg on
- * the pointer state
- */
-static void drawrectxy(int x0, int y0, int x1, int y1)
+void drawrectxy(int x0, int y0, int x1, int y1)
 {
 	int rx = MIN(x0, x1);
 	int ry = MIN(y0, y1);
@@ -264,10 +259,8 @@ void run(void)
 				capwin();
 				quit(True);
 			}
-			/*
-			 * grab, then release the server so other clients don't interfere - 
-			 * this way requests don't end up buffered
-			 */
+			/* grab, then release the server so other clients don't interfere
+             * - this way requests don't end up buffered */
 			XGrabServer(dpy);
 			p.srv = True;
 			p.sel = True;
