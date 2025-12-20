@@ -11,8 +11,8 @@ LIBS = -lX11 -lXinerama
 
 # flags
 CPPFLAGS = -DXINERAMA
-CFLAGS = -std=c99 -Wall -Wextra -O0 -g -fdiagnostics-color=always # debug
-# CFLAGS = -std=c99 -Wall -Wextra -Os -fdiagnostics-color=always
+# CFLAGS = -std=c99 -Wall -Wextra -O0 -g -fdiagnostics-color=always # debug
+CFLAGS = -std=c99 -Wall -Wextra -Os -fdiagnostics-color=always
 LDFLAGS = ${LIBS}
 
 # files
